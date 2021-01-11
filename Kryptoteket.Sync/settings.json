@@ -1,0 +1,15 @@
+{
+  "CosmosDB": {
+    "Endpoint": "",
+    "Key": "",
+    "DatabaseName": "Reflinks"
+  },
+  "CoinGecko": {
+    "Base": "https://api.coingecko.com"
+  },
+  "Discord": {
+    "Base": "https://discord.com",
+    "Id": "",
+    "Webhook": ""
+  }
+}

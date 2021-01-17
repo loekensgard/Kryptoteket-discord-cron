@@ -28,7 +28,7 @@ namespace Kryptoteket.Sync
         }
         //55 23 * * *
         [FunctionName("CheckBets")]
-        public async Task Run([TimerTrigger("* * * * *")] TimerInfo myTimer, ILogger log)
+        public async Task Run([TimerTrigger("55 23 * * *")] TimerInfo myTimer, ILogger log)
         {
             log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 

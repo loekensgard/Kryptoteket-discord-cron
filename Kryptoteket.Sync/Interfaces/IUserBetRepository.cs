@@ -1,13 +1,12 @@
 ﻿using Kryptoteket.Sync.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Kryptoteket.Sync.Interfaces
 {
     public interface IUserBetRepository
     {
-        Task<List<UserBet>> GetUserBets(string id);
+        Task<BetUser> GetUserBet(ulong id);
+        Task AddUser(BetUser betUser);
+        Task UpdateUser(BetUser user);
     }
 }

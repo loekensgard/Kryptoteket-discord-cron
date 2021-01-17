@@ -26,14 +26,16 @@ namespace Kryptoteket.Sync
 
             builder.Services.Configure<DiscordConfiguration>(options => config.GetSection("Discord").Bind(options));
 
-            builder.Services.AddDbContext<RegistryContext>(options => options.UseCosmos(
-                config.GetSection("CosmosDB")["Endpoint"],
-                config.GetSection("CosmosDB")["Key"],
-                config.GetSection("CosmosDB")["DatabaseName"]));
+            //builder.Services.AddDbContext<KryptoteketContext>(options => options.UseCosmos(
+            //    config.GetSection("CosmosDB")["Endpoint"],
+            //    config.GetSection("CosmosDB")["Key"],
+            //    config.GetSection("CosmosDB")["DatabaseName"]));
+
+            builder.Services.AddDbContext<KryptoteketContext>(options => options.UseSqlServer(config.GetConnectionString("Default")));
 
             builder.Services.AddScoped<IUserBetRepository, UserBetRepository>();
             builder.Services.AddScoped<IBetRepository, BetRepository>();
-            builder.Services.AddScoped<IBetWinnersRepository, BetWinnersRepository>();
+            builder.Services.AddScoped<IBetWinnersRepository, FinishedBetPlacementsRepository>();
 
             builder.Services.AddHttpClient<ICoinGeckoAPIService, CoinGeckoAPIService>()
                 .ConfigureHttpClient((service, context) =>

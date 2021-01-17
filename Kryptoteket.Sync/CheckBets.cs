@@ -26,9 +26,9 @@ namespace Kryptoteket.Sync
             _betWinnersRepository = betWinnersRepository;
             _discordWebhookService = discordWebhookService;
         }
-
+        //55 23 * * *
         [FunctionName("CheckBets")]
-        public async Task Run([TimerTrigger("55 23 * * *")] TimerInfo myTimer, ILogger log)
+        public async Task Run([TimerTrigger("* * * * *")] TimerInfo myTimer, ILogger log)
         {
             log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
@@ -40,48 +40,39 @@ namespace Kryptoteket.Sync
             int firstP = 3;
             int secondP = 2;
             int thirdP = 1;
-            string identifier = "bet";
 
-            foreach (var userBets in betsEndingToday)
+            foreach (var bet in betsEndingToday)
             {
-                var users = await _userBetRepository.GetUserBets(userBets.id);
                 var price = await _coinGeckoAPIService.GetBtcPrice();
+                var userbets = new List<PlacedBet>();
+                userbets.AddRange(bet.PlacedBets);
 
-                if (price != null)
+            if (price != null && userbets.Count >= 3)
                 {
                     //Find winner
                     var usd = price.Bitcoin.Usd;
-                    var firstUserBet = users.Aggregate((x, y) => Math.Abs(int.Parse(x.Price) - usd) < Math.Abs(int.Parse(y.Price) - usd) ? x : y);
+                    var firstUserBet = userbets.Aggregate((x, y) => Math.Abs(x.Price - usd) < Math.Abs(y.Price - usd) ? x : y);
 
                     //Find second place
-                    users.Remove(firstUserBet);
-                    var secondUserBet = users.Aggregate((x, y) => Math.Abs(int.Parse(x.Price) - usd) < Math.Abs(int.Parse(y.Price) - usd) ? x : y);
+                    userbets.Remove(firstUserBet);
+                    var secondUserBet = userbets.Aggregate((x, y) => Math.Abs(x.Price - usd) < Math.Abs(y.Price - usd) ? x : y);
 
                     //Find third place
-                    users.Remove(secondUserBet);
-                    var thirdUserBet = users.Aggregate((x, y) => Math.Abs(int.Parse(x.Price) - usd) < Math.Abs(int.Parse(y.Price) - usd) ? x : y);
+                    userbets.Remove(secondUserBet);
+                    var thirdUserBet = userbets.Aggregate((x, y) => Math.Abs(x.Price - usd) < Math.Abs(y.Price - usd) ? x : y);
 
-                    //Id without userbet.Id is the discord id of the user
-                    var firstId = firstUserBet.id.Replace(userBets.id, string.Empty) + identifier;
-                    var secondId = secondUserBet.id.Replace(userBets.id, string.Empty) + identifier;
-                    var thirdId = thirdUserBet.id.Replace(userBets.id, string.Empty) + identifier;
 
-                    var firstUser = await _betWinnersRepository.GetBetWinner(firstId);
-                    var secondUser = await _betWinnersRepository.GetBetWinner(secondId);
-                    var thirdUser = await _betWinnersRepository.GetBetWinner(thirdId);
+                    var firstUser = await _userBetRepository.GetUserBet(firstUserBet.BetUserId);
+                    var secondUser = await _userBetRepository.GetUserBet(secondUserBet.BetUserId);
+                    var thirdUser = await _userBetRepository.GetUserBet(thirdUserBet.BetUserId);
 
-                    if (firstUser == null) await _betWinnersRepository.AddBetWinner(GetPoints(firstP, userBets.id, firstUserBet, firstId, firstUser));
-                    else await _betWinnersRepository.UpdateBetWinner(GetPoints(firstP, userBets.id, firstUserBet, firstId, firstUser));
-
-                    if (secondUser == null) await _betWinnersRepository.AddBetWinner(GetPoints(secondP, userBets.id, secondUserBet, secondId, secondUser));
-                    else await _betWinnersRepository.UpdateBetWinner(GetPoints(secondP, userBets.id, secondUserBet, secondId, secondUser));
-
-                    if (secondUser == null) await _betWinnersRepository.AddBetWinner(GetPoints(thirdP, userBets.id, thirdUserBet, thirdId, thirdUser));
-                    else await _betWinnersRepository.UpdateBetWinner(GetPoints(thirdP, userBets.id, thirdUserBet, thirdId, thirdUser));
+                    await UpdateUser(firstUserBet, firstP, 1, firstUser);
+                    await UpdateUser(secondUserBet, secondP, 2, secondUser);
+                    await UpdateUser(thirdUserBet, thirdP, 3, thirdUser);
 
                     StringBuilder sb = new StringBuilder();
 
-                    sb.AppendLine($"Bet Name: **{userBets.id}**");
+                    sb.AppendLine($"Bet Name: **{bet.ShortName}**");
                     sb.AppendLine($"BTC Price: **${usd}**");
                     sb.AppendLine($"First Place: **{firstUserBet.Name}** | Bet: **{firstUserBet.Price}** | Points: **{firstP}**");
                     sb.AppendLine($"Second Place: **{secondUserBet.Name}** | Bet: **{secondUserBet.Price}** | Points: **{secondP}**");
@@ -97,31 +88,24 @@ namespace Kryptoteket.Sync
             log.LogInformation("App finished");
         }
 
-        private BetWinner GetPoints(int points, string betName, UserBet first, string firstId, BetWinner winner)
+        private async Task UpdateUser(PlacedBet firstUserBet, int point, int place, BetUser user)
         {
-            if (winner == null)
+            var placement = new FinishedBetPlacement
             {
-                return new BetWinner
-                {
-                    id = firstId,
-                    Name = first.Name,
-                    Points = points,
-                    BetsWon = new List<string> { betName }.ToArray()
-                };
-            }
+                BetUserId = firstUserBet.BetUserId,
+                BetId = firstUserBet.BetId,
+                Place = place
+            };
+
+            if (user.Placements == null)
+                user.Placements = new List<FinishedBetPlacement> { placement };
             else
-            {
-                var updated = winner;
-                updated.Points += points;
+                user.Placements.Add(placement);
 
-                List<string> lst = new List<string>(updated.BetsWon)
-                        {
-                            betName
-                        };
-                updated.BetsWon = lst.ToArray();
+            user.Points += point;
 
-                return updated;
-            }
+            await _userBetRepository.UpdateUser(user);
         }
+
     }
 }

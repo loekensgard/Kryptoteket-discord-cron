@@ -8,8 +8,9 @@ namespace Kryptoteket.Sync.Interfaces
 {
     public interface IBetWinnersRepository
     {
-        Task AddBetWinner(BetWinner betWinner);
-        Task<BetWinner> GetBetWinner(string id);
-        Task UpdateBetWinner(BetWinner betWinner);
+        Task AddBetWinner(FinishedBetPlacement betWinner);
+        Task<FinishedBetPlacement> GetBetWinner(int id);
+        Task<List<FinishedBetPlacement>> GetBetWins(ulong userId);
+        Task UpdateBetWinner(FinishedBetPlacement betWinner);
     }
 }

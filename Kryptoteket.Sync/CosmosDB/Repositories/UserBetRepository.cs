@@ -1,27 +1,39 @@
 ﻿using Kryptoteket.Sync.Interfaces;
 using Kryptoteket.Sync.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Kryptoteket.Sync.CosmosDB.Repositories
 {
     public class UserBetRepository : IUserBetRepository
     {
-        private readonly RegistryContext _context;
-        private readonly DbSet<UserBet> _set;
-        public UserBetRepository(RegistryContext context)
+        private readonly KryptoteketContext _context;
+        private readonly DbSet<BetUser> _set;
+        public UserBetRepository(KryptoteketContext context)
         {
             _context = context;
-            _set = _context.UserBets;
+            _set = _context.BetUsers;
         }
 
-        public async Task<List<UserBet>> GetUserBets(string id)
+        public async Task AddUser(BetUser betUser)
         {
-            var list = _set.Where(r => r.BetId == id);
+            _set.Add(betUser);
+            await _context.SaveChangesAsync();
+        }
 
-            return await list.ToListAsync();
+        public async Task<BetUser> GetUserBet(ulong id)
+        {
+            return await _set.Include(x => x.PlacedBets).Include(x => x.Placements).FirstOrDefaultAsync(x => x.BetUserId == id);
+        }
+
+        public async Task UpdateUser(BetUser user)
+        {
+            var entity = await _set.FindAsync(user.BetUserId);
+            if (entity != null)
+            {
+                _context.Entry(entity).CurrentValues.SetValues(user);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

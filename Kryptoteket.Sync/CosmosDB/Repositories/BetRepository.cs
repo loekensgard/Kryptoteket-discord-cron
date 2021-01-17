@@ -8,9 +8,9 @@ namespace Kryptoteket.Sync.CosmosDB.Repositories
 {
     public class BetRepository : IBetRepository
     {
-        private readonly RegistryContext _context;
+        private readonly KryptoteketContext _context;
         private readonly DbSet<Bet> _set;
-        public BetRepository(RegistryContext context)
+        public BetRepository(KryptoteketContext context)
         {
             _context = context;
             _set = _context.Bets;
@@ -18,7 +18,7 @@ namespace Kryptoteket.Sync.CosmosDB.Repositories
 
         public async Task<ICollection<Bet>> GetBets()
         {
-            return await _set.ToListAsync();
+            return await _set.Include(X => X.PlacedBets).ToListAsync();
         }
     }
 }
